@@ -1,0 +1,17 @@
+# pyproject.toml
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kreyai"
+version = "1.0.0"
+description = "Python SDK for KreyAI Transcription API (v1 Stable)"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = ["requests"]
+
+[project.urls]
+Homepage = "https://www.kreyai.com"
+Documentation = "https://api.kreyai.com/docs"
