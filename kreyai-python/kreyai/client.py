@@ -1,37 +1,29 @@
 # kreyai/client.py
-
+import time
 import requests
-from .errors import AuthenticationError, RateLimitError, APIError
+from typing import Optional
+
+from .errors import KreyAIError
+
+DEFAULT_BASE_URL = "https://api.kreyai.com/v1"
 
 
-class KreyAI:
-    """
-    Thin Python client for KreyAI API v1 (Stable).
-    """
-
-    def __init__(
-        self,
-        api_key: str,
-        *,
-        base_url: str = "https://api.kreyai.com/v1",
-        timeout: int = 300,
-    ):
-        if not api_key:
-            raise ValueError("API key is required")
-
+class Client:
+    def __init__(self, api_key: str, base_url: str = DEFAULT_BASE_URL, timeout: int = 60):
+        self.api_key = api_key
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
 
-        self.session = requests.Session()
-        self.session.headers.update(
-            {
-                "Authorization": f"Bearer {api_key}",
-                "User-Agent": "kreyai-python/1.0",
-            }
-        )
+    # -------------------------
+    # Internal helper
+    # -------------------------
+    def _headers(self) -> dict:
+        return {
+            "Authorization": f"Bearer {self.api_key}",
+        }
 
     # -------------------------
-    # Core API
+    # Public API
     # -------------------------
     def transcribe(
         self,
@@ -42,38 +34,56 @@ class KreyAI:
         diarization: bool = False,
         timestamps: bool = True,
     ) -> dict:
-        """
-        Submit a transcription job.
-        """
+        url = f"{self.base_url}/transcriptions"
 
         with open(file_path, "rb") as f:
-            response = self.session.post(
-                f"{self.base_url}/transcriptions",
-                files={"file": f},
-                data={
-                    "language": language,
-                    "output_format": output_format,
-                    "diarization": diarization,
-                    "timestamps": timestamps,
-                },
+            files = {"file": f}
+            data = {
+                "language": language,
+                "output_format": output_format,
+                "diarization": str(diarization).lower(),
+                "timestamps": str(timestamps).lower(),
+            }
+
+            resp = requests.post(
+                url,
+                headers=self._headers(),
+                files=files,
+                data=data,
                 timeout=self.timeout,
             )
 
-        self._handle_errors(response)
-        return response.json()
+        if resp.status_code != 200:
+            raise KreyAIError.from_response(resp)
 
-    # -------------------------
-    # Internal helpers
-    # -------------------------
-    def _handle_errors(self, response: requests.Response) -> None:
-        if response.status_code == 401:
-            raise AuthenticationError("Invalid API key")
+        return resp.json()
 
-        if response.status_code == 429:
-            raise RateLimitError("Rate limit exceeded")
+    def get_job(self, job_id: str) -> dict:
+        url = f"{self.base_url}/jobs/{job_id}"
+        resp = requests.get(url, headers=self._headers(), timeout=self.timeout)
 
-        if response.status_code >= 500:
-            raise APIError("KreyAI server error")
+        if resp.status_code != 200:
+            raise KreyAIError.from_response(resp)
 
-        if response.status_code >= 400:
-            raise APIError(response.text)
+        return resp.json()
+
+    def wait(
+        self,
+        job_id: str,
+        *,
+        poll_interval: float = 2.0,
+        timeout: Optional[float] = None,
+    ) -> dict:
+        start = time.time()
+
+        while True:
+            job = self.get_job(job_id)
+            status = job.get("status")
+
+            if status in ("completed", "failed"):
+                return job
+
+            if timeout is not None and (time.time() - start) > timeout:
+                raise TimeoutError(f"Job {job_id} did not complete in time")
+
+            time.sleep(poll_interval)

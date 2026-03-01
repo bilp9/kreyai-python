@@ -1,19 +1,8 @@
 # KreyAI Python SDK
 
-Python client for the **KreyAI Transcription API**.
+Thin, synchronous Python client for **KreyAI API v1 (Stable)**.
 
-🟢 **API v1 — Stable**
+## Install
 
-Supports:
-- English
-- Spanish
-- French
-- Portuguese
-
-Haitian Creole is intentionally not exposed in v1.
-
----
-
-## Installation
 ```bash
 pip install kreyai

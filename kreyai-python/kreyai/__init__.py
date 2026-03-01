@@ -1,5 +1,5 @@
 # kreyai/__init__.py
+from .client import Client
+from .errors import KreyAIError
 
-from .client import KreyAI
-
-__all__ = ["KreyAI"]
+__all__ = ["Client", "KreyAIError"]

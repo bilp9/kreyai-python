@@ -1,16 +1,12 @@
-# kreyai/errors.py
+# examples/basic.py
+from kreyai import Client
 
-class KreyAIError(Exception):
-    """Base SDK error."""
+client = Client(api_key="YOUR_API_KEY")
 
+result = client.transcribe(
+    "sample.wav",
+    language="en",
+    diarization=True,
+)
 
-class AuthenticationError(KreyAIError):
-    """Invalid or missing API key."""
-
-
-class RateLimitError(KreyAIError):
-    """Quota or rate limit exceeded."""
-
-
-class APIError(KreyAIError):
-    """Server-side error."""
+print(result["text"])
